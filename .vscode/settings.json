@@ -32,7 +32,12 @@
   "cSpell.language": "en,ru",
   "cSpell.ignoreWords": [],
   "cSpell.words": [
+    "aiofiles",
     "aiohttp",
+    "colorlog",
+    "dogovor",
+    "dogovory",
+    "levelname",
     "sublinks"
   ],
 }

@@ -1,18 +1,18 @@
+import time
 import asyncio
 
+from logger import logger
 from handlers import ParserManager
 
 
 async def parse_documents() -> None:
-    parser = ParserManager()
-    await parser.start_parsing()
+    start_time = time.time()
+    async with ParserManager() as parser:
+        await parser.start_parsing()
+    end_time = time.time()
+    duration = end_time - start_time
+    logger.info(f"Total parsing duration: {duration:.2f} seconds")
 
 
 if __name__ == "__main__":
     asyncio.run(parse_documents())
-    
-    
-    
-            # content = await page.inner_html('#documents-menu-documents-collapse')
-            # soup = BeautifulSoup(content, 'html.parser')
-            # await self.save_to_file(soup, "parsed_documents.html")
