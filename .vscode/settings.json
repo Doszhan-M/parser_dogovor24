@@ -1,0 +1,38 @@
+{
+  // - - - StatusBar settings - - - - - - - - - - - - -
+  "workbench.colorCustomizations": {
+    "statusBar.background": "#666666",
+  },
+  // - - - Folder's icon settings - - - - - - - - - - -
+  "material-icon-theme.folders.associations": {
+    "dashboard": "Content",
+  },
+  // - - - PythonPath settings- - - - - - - - - - - - - 
+  "python.defaultInterpreterPath": "./venv/bin/python",
+  // - - - Formatter settings - - - - - - - - - - - - -
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
+  // - - - TodoHighlighter settings - - - - - - - - - - 
+  "todoHighlighter.exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/venv/**",
+  ],
+  // - - - liveSassCompile settings - - - - - - - - - - 
+  "liveSassCompile.settings.formats": [
+    {
+      "format": "compressed",
+      "extensionName": ".min.css",
+      "savePath": "/dashboard/dashboard_dev/src/styles/css"
+    },
+  ],
+  // - - - cSpell settings - - - - - - - - - - - - - - - 
+  "cSpell.language": "en,ru",
+  "cSpell.ignoreWords": [],
+  "cSpell.words": [
+    "aiohttp",
+    "sublinks"
+  ],
+}
