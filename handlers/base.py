@@ -2,7 +2,7 @@ import os
 import aiohttp
 import aiofiles
 from pathlib import Path
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, Page
 
 from logger import logger
 
@@ -10,6 +10,7 @@ from logger import logger
 class BaseParser:
 
     max_filename_length: int = 110
+    secondary_page: Page = None
 
     async def __aenter__(self) -> "BaseParser":
         self.session = aiohttp.ClientSession()
@@ -21,6 +22,8 @@ class BaseParser:
     async def __aexit__(
         self, exc_type: type, exc_value: Exception, traceback: object
     ) -> None:
+        if self.secondary_page:
+            await self.secondary_page.close()
         await self.browser.close()
         await self.playwright.stop()
         await self.session.close()
@@ -37,11 +40,9 @@ class BaseParser:
 
     def sanitize_filename(self, filename: str) -> str:
         sanitized = filename[: self.max_filename_length]
-        if len(filename) > self.max_filename_length:
-            logger.warning(f"Filename truncated: {filename} to {sanitized}")
         return sanitized
 
-    async def request_document(self, url: str) -> str:
+    async def fetch_html(self, url: str) -> str:
         try:
             async with self.session.get(url) as response:
                 response.raise_for_status()

@@ -1,5 +1,6 @@
-from pathlib import Path
+import asyncio
 from typing import List
+from pathlib import Path
 from playwright.async_api import Page
 
 from logger import logger
@@ -11,6 +12,8 @@ class ParserManager(BaseParser, Scraper):
 
     base_url: str = "https://new.dogovor24.kz"
     base_dir: Path = Path("parsed_documents")
+    max_retries: int = 3
+    retry_delay: int = 5
 
     async def start_parsing(self) -> None:
         await self.page.goto(self.base_url + "/documents/dogovory-3")
@@ -34,33 +37,74 @@ class ParserManager(BaseParser, Scraper):
 
     async def parse_sections(self, sections: List[Page], parent_path: Path) -> None:
         for section_link in sections:
-            await section_link.click()
-            await self.page.wait_for_timeout(1000)
-            element = await section_link.query_selector("span.documents__folder-title")
-            subsection_title: str = await element.inner_text()
-            logger.info(f"Parsing subsection: {subsection_title}")
-            nested_parent_path = parent_path / subsection_title
-            self.create_directory(nested_parent_path)
-            parent_element = await section_link.evaluate_handle(
-                "el => el.parentElement"
-            )
-            document_links: List[str] = await self.get_document_links(parent_element)
-            for document_link in document_links:
-                full_url: str = self.base_url + document_link
-                html: str = await self.request_document(full_url)
-                if html:
-                    title, body = await self.parse_document(html)
-                    filename: Path = (
-                        nested_parent_path / f"{self.sanitize_filename(title)}.txt"
+            for attempt in range(self.max_retries):
+                try:
+                    await section_link.click()
+                    await self.page.wait_for_timeout(1000)
+                    element = await section_link.query_selector(
+                        "span.documents__folder-title"
                     )
-                    await self.save_to_file(filename, body)
-            last_element = await parent_element.evaluate_handle(
-                "el => el.lastElementChild"
+                    subsection_title: str = await element.inner_text()
+                    logger.info(f"Parsing subsection: {subsection_title}")
+                    nested_parent_path = parent_path / subsection_title
+                    self.create_directory(nested_parent_path)
+                    parent_element = await section_link.evaluate_handle(
+                        "el => el.parentElement"
+                    )
+                    document_links: List[str] = await self.get_document_links(
+                        parent_element
+                    )
+                    for document_link in document_links:
+                        full_url: str = self.base_url + document_link
+                        await self.parse_document_in_open_tab(
+                            full_url, nested_parent_path
+                        )
+                    last_element = await parent_element.evaluate_handle(
+                        "el => el.lastElementChild"
+                    )
+                    sub_sections: List[Page] = await last_element.query_selector_all(
+                        "a.documents__folder-btn"
+                    )
+                    await self.parse_sections(sub_sections, nested_parent_path)
+                    break  # Если все прошло успешно, выйти из цикла повторных попыток
+                except Exception as e:
+                    logger.error(f"Error parsing subsection {subsection_title}: {e}")
+                    if attempt < self.max_retries - 1:
+                        logger.error(f"Retrying in {self.retry_delay} seconds...")
+                        await asyncio.sleep(self.retry_delay)
+                    else:
+                        logger.error(
+                            f"Failed to parse subsection {subsection_title} after {self.max_retries} attempts"
+                        )
+
+    async def parse_document_in_open_tab(self, url: str, save_path: Path) -> None:
+        if not self.secondary_page:
+            self.secondary_page = await self.browser.new_page()
+        await self.secondary_page.goto(url)
+        html: str = await self.secondary_page.content()
+        title, preview = self.parse_preview(html)
+        try:
+            document_btn = await self.secondary_page.query_selector(
+                ".document-banner button.btn-warning"
             )
-            sub_sections: List[Page] = await last_element.query_selector_all(
-                "a.documents__folder-btn"
+            btn_text: str = await document_btn.inner_text()
+        except AttributeError:
+            logger.warning("AttributeError")
+            document_btn = await self.secondary_page.query_selector(".document-button")
+            btn_text: str = await document_btn.inner_text()
+            print("btn_text: ", btn_text)
+        document = ""
+        if "Перейти" in btn_text:
+            await document_btn.click()
+            await self.secondary_page.wait_for_selector(
+                ".main-document .shared-matrix__wrapper"
             )
-            await self.parse_sections(sub_sections, nested_parent_path)
+            html: str = await self.secondary_page.content()
+            document = self.parse_document(html)
+        body = preview + document
+        filename: Path = save_path / f"{self.sanitize_filename(title)}.txt"
+        await self.save_to_file(filename, body)
+        logger.info(f"Parsed document: {filename}")
 
     async def get_document_links(self, page: Page) -> List[str]:
         document_links: List[str] = []
