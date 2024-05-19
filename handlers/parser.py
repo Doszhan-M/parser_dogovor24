@@ -89,10 +89,9 @@ class ParserManager(BaseParser, Scraper):
             )
             btn_text: str = await document_btn.inner_text()
         except AttributeError:
-            logger.warning("AttributeError")
+            logger.warning("not found document_btn")
             document_btn = await self.secondary_page.query_selector(".document-button")
             btn_text: str = await document_btn.inner_text()
-            print("btn_text: ", btn_text)
         document = ""
         if "Перейти" in btn_text:
             await document_btn.click()
