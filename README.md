@@ -4,13 +4,13 @@
 
 ## Features
 
-- Asynchronous parsing using `aiohttp` and `playwright` for fast and efficient performance.
+- Asynchronous parsing using `playwright` for fast and efficient performance.
 - Saving documents to the local file system.
 - Logging the parsing progress.
 
 ## Installation
 
-Before starting, make sure you have Python 3.10+ and the necessary libraries installed:
+Before starting, make sure you have Python 3.11+ and the necessary libraries installed:
 
 ```sh
 pip install -r requirements.txt
