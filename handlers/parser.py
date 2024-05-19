@@ -1,34 +1,16 @@
-import os
-import aiohttp
-import aiofiles
-import html2text
 from pathlib import Path
-from bs4 import BeautifulSoup
-from typing import List, Tuple
-from playwright.async_api import async_playwright, Page
+from typing import List
+from playwright.async_api import Page
 
 from logger import logger
+from .base import BaseParser
+from .scraper import Scraper
 
 
-class ParserManager:
+class ParserManager(BaseParser, Scraper):
 
     base_url: str = "https://new.dogovor24.kz"
     base_dir: Path = Path("parsed_documents")
-    max_filename_length: int = 110
-
-    async def __aenter__(self) -> "ParserManager":
-        self.session = aiohttp.ClientSession()
-        self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=False)
-        self.page = await self.browser.new_page()
-        return self
-
-    async def __aexit__(
-        self, exc_type: type, exc_value: Exception, traceback: object
-    ) -> None:
-        await self.browser.close()
-        await self.playwright.stop()
-        await self.session.close()
 
     async def start_parsing(self) -> None:
         await self.page.goto(self.base_url + "/documents/dogovory-3")
@@ -49,9 +31,6 @@ class ParserManager:
                 "a.documents__folder-btn"
             )
             await self.parse_sections(subsections, parent_path)
-        # try:
-        # except Exception as e:
-        #     logger.error(f"Error in start_parsing: {e}")
 
     async def parse_sections(self, sections: List[Page], parent_path: Path) -> None:
         for section_link in sections:
@@ -82,9 +61,6 @@ class ParserManager:
                 "a.documents__folder-btn"
             )
             await self.parse_sections(sub_sections, nested_parent_path)
-            # try:
-            # except Exception as e:
-            #     logger.error(f"Error in parse_sections: {e}")
 
     async def get_document_links(self, page: Page) -> List[str]:
         document_links: List[str] = []
@@ -99,46 +75,3 @@ class ParserManager:
         except Exception as e:
             logger.error(f"Error in get_document_links: {e}")
         return document_links
-
-    async def request_document(self, url: str) -> str:
-        try:
-            async with self.session.get(url) as response:
-                response.raise_for_status()
-                html: str = await response.text()
-                return html
-        except aiohttp.ClientError as e:
-            logger.error(f"Error fetching document from {url}: {e}")
-            return ""
-
-    async def parse_document(self, html: str) -> Tuple[str, str]:
-        soup = BeautifulSoup(html, "html.parser")
-        title_element = soup.find(class_="document-banner__title")
-        body_element = soup.find(class_="document__document-body")
-        if title_element:
-            title: str = title_element.text.strip()
-        else:
-            title_element = soup.find(class_="document-title")
-            title: str = title_element.text.strip()
-        if body_element:
-            text_maker = html2text.HTML2Text()
-            text_maker.ignore_links = True
-            body = text_maker.handle(str(body_element))
-            logger.info(f"Parsed document: {title}")
-        return title, body
-
-    def create_directory(self, path: Path) -> None:
-        try:
-            os.makedirs(path, exist_ok=True)
-        except Exception as e:
-            logger.error(f"Error creating directory {path}: {e}")
-
-    async def save_to_file(self, filename: Path, body: str) -> None:
-        async with aiofiles.open(filename, "w", encoding="utf-8") as file:
-            await file.write(body)
-            logger.info(f"Saved document to {filename}")
-
-    def sanitize_filename(self, filename: str) -> str:
-        sanitized = filename[: self.max_filename_length]
-        if len(filename) > self.max_filename_length:
-            logger.warning(f"Filename truncated: {filename} to {sanitized}")
-        return sanitized
