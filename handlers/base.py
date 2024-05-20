@@ -1,3 +1,4 @@
+import re
 import os
 import aiohttp
 import aiofiles
@@ -39,7 +40,8 @@ class BaseParser:
             await file.write(body)
 
     def sanitize_filename(self, filename: str) -> str:
-        sanitized = filename[: self.max_filename_length]
+        filename = re.sub(r'[\\/*?:"<>|]', "", filename)
+        sanitized = filename[: self.max_filename_length].strip()
         return sanitized
 
     async def fetch_html(self, url: str) -> str:

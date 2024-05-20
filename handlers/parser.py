@@ -69,13 +69,13 @@ class ParserManager(BaseParser, Scraper):
                     await self.parse_sections(sub_sections, nested_parent_path)
                     break  # Если все прошло успешно, выйти из цикла повторных попыток
                 except Exception as e:
-                    logger.error(f"Error parsing subsection : {e}")
+                    logger.warning(f"Error parsing subsection : {e}")
                     if attempt < self.max_retries - 1:
-                        logger.error(f"Retrying in {self.retry_delay} seconds...")
+                        logger.warning(f"Retrying in {self.retry_delay} seconds...")
                         await asyncio.sleep(self.retry_delay)
                     else:
                         logger.error(
-                            f"Failed to parse subsection after {self.max_retries} attempts"
+                            f"Failed to parse subsection after {self.max_retries} attempts. Error:\n{e}"
                         )
 
     async def parse_document_in_open_tab(self, url: str, save_path: Path) -> None:
