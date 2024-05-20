@@ -15,7 +15,7 @@ class BaseParser:
     async def __aenter__(self) -> "BaseParser":
         self.session = aiohttp.ClientSession()
         self.playwright = await async_playwright().start()
-        self.browser = await self.playwright.chromium.launch(headless=True)
+        self.browser = await self.playwright.chromium.launch(headless=False)
         self.page = await self.browser.new_page()
         return self
 
