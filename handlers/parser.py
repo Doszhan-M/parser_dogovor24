@@ -12,8 +12,8 @@ class ParserManager(BaseParser, Scraper):
 
     base_url: str = "https://new.dogovor24.kz"
     base_dir: Path = Path("parsed_documents")
-    max_retries: int = 3
-    retry_delay: int = 5
+    max_retries: int = 2
+    retry_delay: int = 3
 
     async def start_parsing(self) -> None:
         await self.page.goto(self.base_url + "/documents/dogovory-3")
@@ -29,7 +29,7 @@ class ParserManager(BaseParser, Scraper):
             element = await section_link.query_selector(".d24__additional-text")
             section_title: str = await element.inner_text()
             logger.info(f"Parsing section: {section_title}")
-            parent_path = self.base_dir / section_title
+            parent_path = self.base_dir / self.sanitize_filename(section_title)
             self.create_directory(parent_path)
             subsections: List[Page] = await self.page.query_selector_all(
                 "a.documents__folder-btn"
