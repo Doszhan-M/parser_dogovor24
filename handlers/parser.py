@@ -24,6 +24,7 @@ class ParserManager(BaseParser, Scraper):
         self.create_directory(self.base_dir)
         for section_link in sections:
             await section_link.click()
+            await self.page.screenshot(path=self.base_dir / "headless_screenshot.png")
             await self.page.wait_for_timeout(1000)
             element = await section_link.query_selector(".d24__additional-text")
             section_title: str = await element.inner_text()

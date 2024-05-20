@@ -7,6 +7,7 @@ from handlers import ParserManager
 
 async def parse_documents() -> None:
     start_time = time.time()
+    logger.info("Start parsing")
     async with ParserManager() as parser:
         await parser.start_parsing()
     end_time = time.time()
